@@ -1,0 +1,20 @@
+
+name: Test Football Soccer API dækning
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check-coverage:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Hent repository
+        uses: actions/checkout@v4
+
+      - name: Kontrollér sæsondækning
+        env:
+          FSAPI_KEY: ${{ secrets.FSAPI_KEY }}
+        run: python scripts/check_fsapi_coverage.py
