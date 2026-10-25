@@ -30,7 +30,9 @@ def main():
     try:
         result = get("/sports")
         print("Forbindelse OK: /sports svarede.")
-        print("Svarformat:", type(result).__name__)
+       print("Svarformat:", type(result).__name__)
+print("Katalogindhold:")
+print(json.dumps(result, ensure_ascii=False, indent=2)[:6000])
     except urllib.error.HTTPError as exc:
         print("API-fejl: HTTP", exc.code)
         print(exc.read().decode("utf-8", errors="replace")[:500])
