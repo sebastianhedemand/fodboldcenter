@@ -30,15 +30,15 @@ def main():
     try:
         result = get("/sports")
         print("Forbindelse OK: /sports svarede.")
-       print("Svarformat:", type(result).__name__)
-print("Katalogindhold:")
-print(json.dumps(result, ensure_ascii=False, indent=2)[:6000])
+        print("Svarformat:", type(result).__name__)
+        print("Katalogindhold:")
+        print(json.dumps(result, ensure_ascii=False, indent=2)[:6000])
     except urllib.error.HTTPError as exc:
         print("API-fejl: HTTP", exc.code)
         print(exc.read().decode("utf-8", errors="replace")[:500])
         raise SystemExit(1)
     except Exception as exc:
-        print("Forbindelsesfejl:", type(exc).__name__)
+        print("Fejl:", type(exc).__name__, str(exc))
         raise SystemExit(1)
 
 
