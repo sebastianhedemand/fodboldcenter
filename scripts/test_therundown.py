@@ -79,8 +79,13 @@ def main():
                     f"  {' – '.join(names)} | "
                     f"totalmarked fundet: {total_found}"
                 )
-        except Exception as exc:
-            print(f"{league}: fejl af typen {type(exc).__name__}")
+       except Exception as exc:
+    if hasattr(exc, "code"):
+        print(f"{league}: HTTP {exc.code}")
+        if hasattr(exc, "read"):
+            print(exc.read().decode("utf-8", errors="replace")[:500])
+    else:
+        print(f"{league}: {type(exc).__name__}: {exc}")
 
 if __name__ == "__main__":
     main()
