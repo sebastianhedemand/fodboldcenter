@@ -24,7 +24,7 @@ th,td{padding:9px 8px;text-align:right;border-bottom:1px solid var(--line)}th{co
 <header><h1>⚽ Fodboldcenter</h1><p>Kampe · stillinger · holddata · målværdier</p></header>
 <main>
 <div class="tabs" id="tabs"><button data-tab="oversigt" class="active">Oversigt</button><button data-tab="kampe">Kampe & resultater</button><button data-tab="hold">Holddata</button><button data-tab="vaerdi">Over 1,5 / 2,5</button><button data-tab="top10">Top 10 værdi</button><button data-tab="backup">Backup</button></div>
-<div class="row" style="margin:0 0 12px;align-items:center"><button class="btn primary" id="updateResults">🔄 Opdatér kampresultater (6 ligaer)</button><span id="resultsUpdateStatus" class="small" role="status">Resultater opdateres kun, når du trykker på knappen. Superligaen og 1. Division forbliver manuelle.</span></div>
+<div class="row" style="margin:0 0 12px;align-items:center"><button class="btn primary" id="updateResults">🔄 Opdatér kampe og resultater</button><span id="resultsUpdateStatus" class="small" role="status">Bundesligaens kampprogram og resultater hentes automatisk ved opdatering. Superligaen og 1. Division forbliver manuelle.</span></div>
 <div class="row" style="margin-bottom:12px"><div class="field" style="min-width:220px;flex:1"><label for="league">Vælg liga</label><select id="league"></select></div><div class="field" style="min-width:140px"><label for="season">Sæson</label><input id="season" value="2026/27"></div></div><div id="app"></div>
 </main>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -192,7 +192,7 @@ function table(rows){if(!rows.length)return '<div class="empty">Ingen hold eller
 function render(){$('app').innerHTML=({oversigt:overview,kampe:games,hold:holddata,vaerdi:values,top10:top10,backup:backups}[tab])();if(tab==='backup'){syncStatus(fcStatusMessage);updateSyncControls()}}
 function top10(){return topValueSection()}
 function overview(){let ms=matches(),done=ms.filter(m=>m.hg!==''&&m.ag!==''&&m.hg!=null&&m.ag!=null),rows=standings();return '<div class="grid"><div class="stat"><strong>'+ms.length+'</strong><span>Kampe oprettet</span></div><div class="stat"><strong>'+done.length+'</strong><span>Resultater indtastet</span></div><div class="stat"><strong>'+teams().length+'</strong><span>Hold i ligaen</span></div><div class="stat"><strong>'+(done.length?(done.reduce((s,m)=>s+(+m.hg + +m.ag),0)/done.length).toFixed(2):'—')+'</strong><span>Gennemsnitlige mål pr. kamp</span></div></div><section class="panel"><h2>Stilling · '+esc(league())+'</h2>'+table(rows)+'</section><div class="notice">Kampprogrammer fra dine otte Excel-filer er indlæst. Stillingen og holdstatistik opdateres automatisk ud fra resultaterne.</div>'}
-function games(){let ms=matches().slice().sort((a,b)=>(a.date||'').localeCompare(b.date||''));return '<section class="panel"><h2>Opret kamp</h2><div class="grid"><div class="field"><label>Dato</label><input id="date" type="date"></div><div class="field"><label>Hjemmehold</label><input id="home" list="teamlist" placeholder="Fx Arsenal"></div><div class="field"><label>Udehold</label><input id="away" list="teamlist" placeholder="Fx Chelsea"></div></div><datalist id="teamlist">'+teams().map(t=>'<option value="'+esc(t)+'">').join('')+'</datalist><p><button class="btn primary" id="addmatch">Tilføj kamp</button></p><p class="small">Indtast holdnavne ens hver gang. Resultater kan ændres direkte nedenfor.</p></section><section class="panel"><h2>Kampe og resultater ('+ms.length+')</h2>'+(!ms.length?'<div class="empty">Ingen kampe endnu.</div>':ms.map(m=>'<div class="match"><div class="team">'+esc(m.home)+(m.date?'<div class="small">'+esc(m.date)+'</div>':'')+'</div><input class="score" aria-label="Hjemmemål" type="number" min="0" step="1" placeholder="–" data-id="'+m.id+'" data-side="hg" value="'+(m.hg??'')+'"><input class="score" aria-label="Udemål" type="number" min="0" step="1" placeholder="–" data-id="'+m.id+'" data-side="ag" value="'+(m.ag??'')+'"><div class="team">'+esc(m.away)+'</div><button class="btn" data-delete="'+m.id+'">Slet</button></div>').join(''))+'</section>'}
+function games(){let ms=matches().slice().sort((a,b)=>(a.date||'').localeCompare(b.date||''));return '<section class="panel"><h2>Opret kamp</h2><div class="grid"><div class="field"><label>Dato</label><input id="date" type="date"></div><div class="field"><label>Hjemmehold</label><input id="home" list="teamlist" placeholder="Fx Arsenal"></div><div class="field"><label>Udehold</label><input id="away" list="teamlist" placeholder="Fx Chelsea"></div></div><datalist id="teamlist">'+teams().map(t=>'<option value="'+esc(t)+'">').join('')+'</datalist><p><button class="btn primary" id="addmatch">Tilføj kamp</button></p><p class="small">Indtast holdnavne ens hver gang. Resultater kan ændres direkte nedenfor.</p></section><section class="panel"><h2>Kampe og resultater ('+ms.length+')</h2>'+(!ms.length?'<div class="empty">Ingen kampe endnu.</div>':ms.map(m=>'<div class="match"><div class="team">'+esc(m.home)+(m.date?'<div class="small">'+esc(m.date)+(m.time?' · '+esc(m.time):'')+'</div>':'')+'</div><input class="score" aria-label="Hjemmemål" type="number" min="0" step="1" placeholder="–" data-id="'+m.id+'" data-side="hg" value="'+(m.hg??'')+'"><input class="score" aria-label="Udemål" type="number" min="0" step="1" placeholder="–" data-id="'+m.id+'" data-side="ag" value="'+(m.ag??'')+'"><div class="team">'+esc(m.away)+'</div><button class="btn" data-delete="'+m.id+'">Slet</button></div>').join(''))+'</section>'}
 function holddata(){let rows=standings();return '<section class="panel"><h2>Holddata · '+esc(league())+'</h2>'+(!rows.length?'<div class="empty">Tilføj kampe først.</div>':'<div class="scroll"><table><thead><tr><th>Hold</th><th>Kampe i alt</th><th>Hjemme kampe</th><th>Ude kampe</th><th>Mål for hjemme</th><th>Mål imod hjemme</th><th>Mål for ude</th><th>Mål imod ude</th><th>Snit mål for hjemme</th><th>Snit mål imod hjemme</th><th>Snit mål for ude</th><th>Snit mål imod ude</th><th>Point hjemme</th><th>Point ude</th><th>Point i alt</th><th>Over 1,5</th><th>Under 1,5</th><th>Over 2,5</th><th>Under 2,5</th></tr></thead><tbody>'+rows.map(r=>{let played=matches().filter(m=>m.hg!==''&&m.ag!==''&&m.hg!=null&&m.ag!=null),home=played.filter(m=>m.home===r.team),away=played.filter(m=>m.away===r.team),teamPlayed=played.filter(m=>m.home===r.team||m.away===r.team);let hgf=home.reduce((s,m)=>s+(+m.hg),0),hga=home.reduce((s,m)=>s+(+m.ag),0),agf=away.reduce((s,m)=>s+(+m.ag),0),aga=away.reduce((s,m)=>s+(+m.hg),0);let hp=home.reduce((s,m)=>s+(+m.hg>+m.ag?3:+m.hg===+m.ag?1:0),0),ap=away.reduce((s,m)=>s+(+m.ag>+m.hg?3:+m.ag===+m.hg?1:0),0);let avg=(v,n)=>n?(v/n).toFixed(2):'—',over=n=>teamPlayed.length?pct(teamPlayed.filter(m=>+m.hg + +m.ag>=n).length,teamPlayed.length):'—',under=n=>teamPlayed.length?pct(teamPlayed.filter(m=>+m.hg + +m.ag<n).length,teamPlayed.length):'—';return '<tr><td>'+esc(r.team)+'</td><td>'+r.p+'</td><td>'+home.length+'</td><td>'+away.length+'</td><td>'+hgf+'</td><td>'+hga+'</td><td>'+agf+'</td><td>'+aga+'</td><td>'+avg(hgf,home.length)+'</td><td>'+avg(hga,home.length)+'</td><td>'+avg(agf,away.length)+'</td><td>'+avg(aga,away.length)+'</td><td>'+hp+'</td><td>'+ap+'</td><td><b>'+(hp+ap)+'</b></td><td>'+over(2)+'</td><td>'+under(2)+'</td><td>'+over(3)+'</td><td>'+under(3)+'</td></tr>'}).join('')+'</tbody></table></div>')+'</section><section class="panel"><h2>Tilføj hold til liga</h2><div class="row"><input id="newteam" placeholder="Holdnavn" style="flex:1;min-width:180px"><button class="btn primary" id="addteam">Tilføj hold</button></div><p class="small">Hold uden kampe vises med 0 kampe. Snit beregnes separat for hjemme- og udekampe.</p><div class="row">'+teams().map(t=>'<span class="stat">'+esc(t)+'</span>').join('')+'</div></section>'}
 function poissonOver(lambda,threshold){if(!(lambda>0))return 0;let p=Math.exp(-lambda),sum=p;for(let k=1;k<=threshold;k++){p*=lambda/k;sum+=p}return Math.max(0,Math.min(1,1-sum))}
 function teamMetrics(team){let ms=matches().filter(m=>m.hg!==''&&m.ag!==''&&m.hg!=null&&m.ag!=null&&(m.home===team||m.away===team));let h=ms.filter(m=>m.home===team),a=ms.filter(m=>m.away===team);const avg=(arr,fn)=>arr.length?arr.reduce((s,m)=>s+fn(m),0)/arr.length:null;return {homeN:h.length,awayN:a.length,homeGF:avg(h,m=>+m.hg),homeGA:avg(h,m=>+m.ag),awayGF:avg(a,m=>+m.ag),awayGA:avg(a,m=>+m.hg),allN:ms.length,over15:ms.length?ms.filter(m=>+m.hg + +m.ag>=2).length/ms.length:null,over25:ms.length?ms.filter(m=>+m.hg + +m.ag>=3).length/ms.length:null}}
@@ -200,7 +200,7 @@ function normTeamName(v){
  let n=String(v||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/&/g,' and ').replace(/[^a-z0-9]/g,'');
  const aliases={
   'birminghamcity':'birmingham','blackburnrovers':'blackburn','boltonwanderers':'bolton','cardiffcity':'cardiff','charltonathletic':'charlton','derbycounty':'derby','lincolncity':'lincoln','norwichcity':'norwich','portsmouthfc':'portsmouth','prestonnorthend':'preston','queensparkrangers':'qpr','sheffieldunited':'sheffieldutd','swanseacity':'swansea','westbromwichalbion':'westbrom','westhamunited':'westham','wolverhamptonwanderers':'wolves','afcbournemouth':'bournemouth',
-  '1fccologne':'cologne','fcunionberlin':'unionberlin','1fswmainz05':'mainz','1fswmainz':'mainz','bayer04leverkusen':'leverkusen','borussiamonchengladbach':'monchengladbach','borussiamgladbach':'monchengladbach','fcbayernmunchen':'bayernmunich','fcbayernmunich':'bayernmunich','fcaugsburg':'augsburg','fcschalke04':'schalke04','svelversberg':'elversberg','svwerderbremen':'werderbremen','sportclubfreiburg':'freiburg','scfreiburg':'freiburg','tsghoffenheim':'hoffenheim','vfb stuttgart':'stuttgart','vfb stuttgart':'stuttgart','hamburgersv':'hamburg','rbleipzig':'leipzig','borussiadortmund':'dortmund','eintrachtfrankfurt':'frankfurt','atleticomadrid':'atleticodemadrid','celta':'celtavigo','levanteud':'levante','milan':'acmilan','internazionale':'intermilan'
+  '1fccologne':'cologne','1fckoln':'cologne','fcunionberlin':'unionberlin','1fcunionberlin':'unionberlin','1fsvmainz05':'mainz','1fswmainz05':'mainz','1fswmainz':'mainz','bayer04leverkusen':'leverkusen','borussiamonchengladbach':'monchengladbach','borussiamgladbach':'monchengladbach','fcbayernmunchen':'bayernmunich','fcbayernmunich':'bayernmunich','fcaugsburg':'augsburg','fcschalke04':'schalke04','sv07elversberg':'elversberg','svelversberg':'elversberg','svwerderbremen':'werderbremen','sportclubfreiburg':'freiburg','scfreiburg':'freiburg','tsghoffenheim':'hoffenheim','vfb stuttgart':'stuttgart','hamburgersv':'hamburg','rbleipzig':'leipzig','borussiadortmund':'dortmund','eintrachtfrankfurt':'frankfurt','atleticomadrid':'atleticodemadrid','celta':'celtavigo','levanteud':'levante','milan':'acmilan','internazionale':'intermilan'
  };
  return aliases[n]||n;
 }
@@ -221,31 +221,77 @@ function parseResultCsv(text){
 function seasonCode(v){const m=String(v||'').match(/(\d{4})\/(\d{2,4})/);if(!m)return null;return m[1].slice(-2)+m[2].slice(-2);}
 function datesClose(a,b){if(!a||!b)return false;const x=Date.parse(a+'T00:00:00Z'),y=Date.parse(b+'T00:00:00Z');return Number.isFinite(x)&&Number.isFinite(y)&&Math.abs(x-y)<=86400000;}
 async function updateResults(){
- const btn=document.getElementById('updateResults'),status=document.getElementById('resultsUpdateStatus');if(btn)btn.disabled=true;if(status)status.textContent='Henter resultater fra gratis datakilde…';
- let updated=0,already=0,unmatched=0,errors=[],leagueStats=[];const seasonValue=$('season').value||'2026/27',code=seasonCode(seasonValue);
+ const btn=document.getElementById('updateResults'),status=document.getElementById('resultsUpdateStatus');
+ if(btn)btn.disabled=true;
+ if(status)status.textContent='Henter kampprogram og resultater…';
+ let updated=0,added=0,already=0,unmatched=0,errors=[],leagueStats=[];
+ const seasonValue=$('season').value||'2026/27',code=seasonCode(seasonValue);
  if(!code){if(status)status.textContent='Kunne ikke genkende sæsonen. Brug fx 2026/27.';if(btn)btn.disabled=false;return;}
  try{
   for(const [leagueName,folder] of Object.entries(resultSources)){
-   const url=`https://raw.githubusercontent.com/oladeeayo/open-matchday/master/data/${folder}/results_${code}.csv`;
+   const base=`https://raw.githubusercontent.com/oladeeayo/open-matchday/master/data/${folder}/`;
    try{
-    const response=await fetch(url,{cache:'no-store'});if(!response.ok)throw new Error('HTTP '+response.status);const rows=parseResultCsv(await response.text());
+    let fixtures=[];
+    if(leagueName==='Bundesliga'){
+     const fr=await fetch(base+'fixtures_'+code+'.csv',{cache:'no-store'});
+     if(!fr.ok)throw new Error('Kampprogram HTTP '+fr.status);
+     fixtures=parseResultCsv(await fr.text());
+     if(!fixtures.length)throw new Error('CSV uden kampprogram');
+    }
+    const rr=await fetch(base+'results_'+code+'.csv',{cache:'no-store'});
+    if(!rr.ok)throw new Error('Resultater HTTP '+rr.status);
+    const rows=parseResultCsv(await rr.text());
     if(!rows.length)throw new Error('CSV uden resultater');
-    let leagueUpdated=0,leagueAlready=0,leagueUnmatched=0;
     const leagueMatches=data.matches.filter(m=>m.league===leagueName&&m.season===seasonValue);
-    for(const r of rows){const date=r.date||'';const home=r.home||'';const away=r.away||'';const hg=r.ft_home;const ag=r.ft_away;
-     if(!date||!home||!away||hg===''||ag===''||hg==null||ag==null||!/^\d+$/.test(String(hg))||!/^\d+$/.test(String(ag)))continue;
-     const h=normTeamName(home),a=normTeamName(away);
-     const candidates=leagueMatches.filter(m=>normTeamName(m.home)===h&&normTeamName(m.away)===a&&datesClose(m.date,date));
-     if(candidates.length!==1){unmatched++;leagueUnmatched++;continue;}const m=candidates[0];
+    const locate=(r)=>{
+     const h=normTeamName(r.home),a=normTeamName(r.away);
+     let candidates=leagueMatches.filter(m=>normTeamName(m.home)===h&&normTeamName(m.away)===a);
+     if(r.gw)candidates=candidates.filter(m=>!m.round||Number(m.round)===Number(r.gw));
+     if(candidates.length!==1&&r.date){
+      const byDate=leagueMatches.filter(m=>normTeamName(m.home)===h&&normTeamName(m.away)===a&&datesClose(m.date,r.date));
+      if(byDate.length===1)candidates=byDate;
+     }
+     return candidates.length===1?candidates[0]:null;
+    };
+    let leagueAdded=0,leagueUpdated=0,leagueAlready=0,leagueUnmatched=0;
+    if(leagueName==='Bundesliga'){
+     for(const r of fixtures){
+      if(!r.date||!r.home||!r.away)continue;
+      let m=locate(r);
+      if(!m){
+       m={id:'bl-'+code+'-'+String(r.gw||'x')+'-'+Math.random().toString(36).slice(2,9),league:leagueName,season:seasonValue,date:r.date,round:Number(r.gw)||null,home:r.home,away:r.away,hg:'',ag:'',time:r.time||''};
+       data.matches.push(m);leagueMatches.push(m);leagueAdded++;
+      }else{
+       m.date=r.date;
+       if(r.time)m.time=r.time;
+       if(r.gw)m.round=Number(r.gw);
+      }
+     }
+    }
+    for(const r of rows){
+     const hg=r.ft_home,ag=r.ft_away;
+     if(!r.date||!r.home||!r.away||hg===''||ag===''||hg==null||ag==null||!/^\d+$/.test(String(hg))||!/^\d+$/.test(String(ag)))continue;
+     let m=locate(r);
+     if(!m){
+      if(leagueName==='Bundesliga'){
+       m={id:'bl-'+code+'-'+String(r.gw||'x')+'-'+Math.random().toString(36).slice(2,9),league:leagueName,season:seasonValue,date:r.date,round:Number(r.gw)||null,home:r.home,away:r.away,hg:'',ag:'',time:r.time||''};
+       data.matches.push(m);leagueMatches.push(m);leagueAdded++;
+      }else{unmatched++;leagueUnmatched++;continue;}
+     }
+     if(r.time)m.time=r.time;
+     if(r.gw)m.round=Number(r.gw);
      if(m.hg!==''&&m.ag!==''&&m.hg!=null&&m.ag!=null){already++;leagueAlready++;continue;}
      m.hg=String(hg);m.ag=String(ag);updated++;leagueUpdated++;
     }
-    leagueStats.push(`${leagueName}: +${leagueUpdated}, allerede ${leagueAlready}, ikke matchet ${leagueUnmatched}`);
+    added+=leagueAdded;
+    leagueStats.push(`${leagueName}: ${leagueAdded} nye kampe, ${leagueUpdated} resultater, ${leagueAlready} allerede registreret`);
    }catch(err){errors.push(leagueName+': '+String(err.message||err));}
   }
-  if(updated>0)save();render();
-  const summary=`Færdig: ${updated} resultater tilføjet. ${already} havde allerede resultat. ${unmatched} kampe kunne ikke matches sikkert.`;
-  const el=document.getElementById('resultsUpdateStatus');if(el)el.textContent=(errors.length?summary+' Fejl: '+errors.join(' · '):summary)+' Pr. liga: '+leagueStats.join(' | ')+'. Superligaen og 1. Division er ikke ændret.';
+  if(added||updated)save();
+  render();
+  const summary=`Opdatering færdig: ${added} nye kampe tilføjet og ${updated} resultater opdateret. ${already} resultater var allerede registreret.`;
+  const el=document.getElementById('resultsUpdateStatus');
+  if(el)el.textContent=summary+(errors.length?' Fejl: '+errors.join(' · '):'')+' Detaljer: '+leagueStats.join(' | ')+'.';
  }catch(err){if(status)status.textContent='Opdatering mislykkedes: '+String(err.message||err);}
  finally{const b=document.getElementById('updateResults');if(b)b.disabled=false;}
 }
