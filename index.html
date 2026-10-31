@@ -224,7 +224,7 @@ async function updateResults(){
  const btn=document.getElementById('updateResults'),status=document.getElementById('resultsUpdateStatus');
  if(btn)btn.disabled=true;
  if(status)status.textContent='Henter kampprogram og resultater…';
- let updated=0,added=0,already=0,unmatched=0,errors=[],leagueStats=[];
+ let updated=0,added=0,already=0,unmatched=0,errors=[],leagueStats=[],changed=false;
  const seasonValue=$('season').value||'2026/27',code=seasonCode(seasonValue);
  if(!code){if(status)status.textContent='Kunne ikke genkende sæsonen. Brug fx 2026/27.';if(btn)btn.disabled=false;return;}
  try{
@@ -245,13 +245,11 @@ async function updateResults(){
     const leagueMatches=data.matches.filter(m=>m.league===leagueName&&m.season===seasonValue);
     const locate=(r)=>{
      const h=normTeamName(r.home),a=normTeamName(r.away);
-     let candidates=leagueMatches.filter(m=>normTeamName(m.home)===h&&normTeamName(m.away)===a);
-     if(r.gw)candidates=candidates.filter(m=>!m.round||Number(m.round)===Number(r.gw));
-     if(candidates.length!==1&&r.date){
-      const byDate=leagueMatches.filter(m=>normTeamName(m.home)===h&&normTeamName(m.away)===a&&datesClose(m.date,r.date));
-      if(byDate.length===1)candidates=byDate;
-     }
-     return candidates.length===1?candidates[0]:null;
+     const sameTeams=leagueMatches.filter(m=>normTeamName(m.home)===h&&normTeamName(m.away)===a);
+     if(sameTeams.length===1)return sameTeams[0];
+     if(r.gw){const byRound=sameTeams.filter(m=>Number(m.round)===Number(r.gw));if(byRound.length===1)return byRound[0];}
+     if(r.date){const byDate=sameTeams.filter(m=>datesClose(m.date,r.date));if(byDate.length===1)return byDate[0];}
+     return null;
     };
     let leagueAdded=0,leagueUpdated=0,leagueAlready=0,leagueUnmatched=0;
     if(leagueName==='Bundesliga'){
@@ -262,9 +260,9 @@ async function updateResults(){
        m={id:'bl-'+code+'-'+String(r.gw||'x')+'-'+Math.random().toString(36).slice(2,9),league:leagueName,season:seasonValue,date:r.date,round:Number(r.gw)||null,home:r.home,away:r.away,hg:'',ag:'',time:r.time||''};
        data.matches.push(m);leagueMatches.push(m);leagueAdded++;
       }else{
-       m.date=r.date;
-       if(r.time)m.time=r.time;
-       if(r.gw)m.round=Number(r.gw);
+       if(m.date!==r.date){m.date=r.date;changed=true;}
+       if(r.time&&m.time!==r.time){m.time=r.time;changed=true;}
+       if(r.gw&&Number(m.round)!==Number(r.gw)){m.round=Number(r.gw);changed=true;}
       }
      }
     }
@@ -275,19 +273,20 @@ async function updateResults(){
      if(!m){
       if(leagueName==='Bundesliga'){
        m={id:'bl-'+code+'-'+String(r.gw||'x')+'-'+Math.random().toString(36).slice(2,9),league:leagueName,season:seasonValue,date:r.date,round:Number(r.gw)||null,home:r.home,away:r.away,hg:'',ag:'',time:r.time||''};
-       data.matches.push(m);leagueMatches.push(m);leagueAdded++;
+       data.matches.push(m);leagueMatches.push(m);leagueAdded++;changed=true;
       }else{unmatched++;leagueUnmatched++;continue;}
      }
-     if(r.time)m.time=r.time;
+     if(m.date!==r.date){m.date=r.date;changed=true;}
+     if(r.time&&m.time!==r.time){m.time=r.time;changed=true;}
      if(r.gw)m.round=Number(r.gw);
      if(m.hg!==''&&m.ag!==''&&m.hg!=null&&m.ag!=null){already++;leagueAlready++;continue;}
-     m.hg=String(hg);m.ag=String(ag);updated++;leagueUpdated++;
+     m.hg=String(hg);m.ag=String(ag);updated++;leagueUpdated++;changed=true;
     }
     added+=leagueAdded;
     leagueStats.push(`${leagueName}: ${leagueAdded} nye kampe, ${leagueUpdated} resultater, ${leagueAlready} allerede registreret`);
    }catch(err){errors.push(leagueName+': '+String(err.message||err));}
   }
-  if(added||updated)save();
+  if(added||updated||changed)save();
   render();
   const summary=`Opdatering færdig: ${added} nye kampe tilføjet og ${updated} resultater opdateret. ${already} resultater var allerede registreret.`;
   const el=document.getElementById('resultsUpdateStatus');
