@@ -33,6 +33,7 @@ Status: udviklingsspecifikation, ikke en påstand om færdig liveintegration. De
 
 ## Nuværende integrationer og kendte begrænsninger
 - `scripts/update_results.py` opdaterer indlejret `initialData` ud fra API-Football for et 7-dages interval. Workflowet `.github/workflows/update-results.yml` er planlagt dagligt kl. 04:30 UTC; dette er ikke live.
+- Resultatsynkronisering overskriver ikke længere eksisterende/manuelle scorer. Konflikter og delvist udfyldte scorer sendes til manuel kontrol. Håndboldens browserimport følger samme princip. Regressionstests for disse regler køres i GitHub Actions.
 - Eksisterende fodboldodds kommer via en Supabase Edge Function i browserappen, ikke via en fuldt verificeret dækkende odds-pipeline.
 - `scripts/test_therundown.py` er en prøveforespørgsel for udvalgte udenlandske ligaer, ikke en aktiv oddsimport.
 - SportsEvents24 dansk håndbold-query findes, men tysk Bundesliga-ID, stabilitet, kvoter og rettigheder er ikke endeligt valideret.
