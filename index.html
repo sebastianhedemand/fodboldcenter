@@ -259,7 +259,7 @@ function registerCurrentTip(){
  const model=currentMatchModel(home,away,type);
  const market='Over '+(type==='15'?'1,5':'2,5');
  const marketOdds=findAutomaticOdds(home,away,type);
- data.tips.push({id:'tip-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,7),createdAt:new Date().toISOString(),league:league(),season:season(),sport:'football',home,away,market,odds,bookmaker:marketOdds?.overBook||'Manuelt indtastet',probability:model.probability,fairOdds:model.probability>0?1/model.probability:null,ev:model.probability*odds-1,stake:1,status:'pending',modelVersion:model.modelVersion});
+ data.tips.push({id:'tip-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,7),createdAt:new Date().toISOString(),league:league(),season:season(),sport:'football',home,away,market,odds,bookmaker:marketOdds&&Number(marketOdds.overDecimal)===odds?(marketOdds.overBook||'Bookmaker'):'Manuelt indtastet',probability:model.probability,fairOdds:model.probability>0?1/model.probability:null,ev:model.probability*odds-1,stake:1,status:'pending',modelVersion:model.modelVersion});
  save();render();
 }
 function settleTip(id,status){
