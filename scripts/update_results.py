@@ -41,6 +41,29 @@ def norm(value):
     return re.sub(r"[^a-z0-9]", "", (value or "").lower())
 
 
+def result_key(day, home, away):
+    """Stable exact-match key; deliberately does not fuzzy-match team names."""
+    return (str(day or "")[:10], norm(home), norm(away))
+
+
+def apply_verified_result(game, score, source="api-football", verified_at=None):
+    """Fill a missing score; never silently replace an existing/manual result."""
+    old_home, old_away = game.get("hg"), game.get("ag")
+    has_home = old_home not in (None, "")
+    has_away = old_away not in (None, "")
+    if has_home != has_away:
+        return "incomplete"
+    if has_home:
+        if (str(old_home), str(old_away)) == (str(score[0]), str(score[1])):
+            return "already"
+        return "conflict"
+    game["hg"], game["ag"] = int(score[0]), int(score[1])
+    game["result_source"] = source
+    if verified_at:
+        game["result_verified_at"] = verified_at
+    return "filled"
+
+
 def main():
     if not API_KEY:
         raise RuntimeError("GitHub Secret API_FOOTBALL_KEY mangler.")
@@ -73,40 +96,29 @@ def main():
                 and goals.get("home") is not None
                 and goals.get("away") is not None
             ):
-                key = (day, norm(home.get("name")), norm(away.get("name")))
+                key = result_key(day, home.get("name"), away.get("name"))
                 finished[key] = (int(goals["home"]), int(goals["away"]))
         checked += len(finished)
 
         for game in matches:
             if game.get("league") != league:
                 continue
-            key = (
-                str(game.get("date", ""))[:10],
-                norm(game.get("home")),
-                norm(game.get("away")),
-            )
+            key = result_key(game.get("date"), game.get("home"), game.get("away"))
             score = finished.get(key)
             if score is None:
                 continue
-            old_home, old_away = game.get("hg"), game.get("ag")
-            has_existing_score = old_home not in (None, "") and old_away not in (None, "")
-            if has_existing_score:
-                if (str(old_home), str(old_away)) == (str(score[0]), str(score[1])):
-                    already += 1
-                else:
-                    conflicts += 1
-                    print(
-                        "KONFLIKT – eksisterende score bevares: "
-                        f"{league} {key[0]} {game.get('home')}–{game.get('away')} "
-                        f"lokal={old_home}-{old_away}, provider={score[0]}-{score[1]}"
-                    )
-                continue
-
-            game["hg"], game["ag"] = score
-            game["result_source"] = "api-football"
-            game["result_verified_at"] = today.isoformat()
-            filled += 1
-
+            outcome = apply_verified_result(game, score, verified_at=today.isoformat())
+            if outcome == "already":
+                already += 1
+            elif outcome in ("conflict", "incomplete"):
+                conflicts += 1
+                print(
+                    f"MANUEL KONTROL ({outcome}) – eksisterende score bevares: "
+                    f"{league} {key[0]} {game.get('home')}–{game.get('away')} "
+                    f"lokal={game.get('hg')}-{game.get('ag')}, provider={score[0]}-{score[1]}"
+                )
+            elif outcome == "filled":
+                filled += 1
     if filled:
         updated_html = (
             html[:match.start(1)]
