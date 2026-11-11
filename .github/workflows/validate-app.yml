@@ -24,3 +24,5 @@ jobs:
           node-version: "22"
       - name: Check app features and inline JavaScript syntax
         run: python scripts/check_inline_js.py
+      - name: Test safe result reconciliation
+        run: python -m unittest discover -s tests -v
