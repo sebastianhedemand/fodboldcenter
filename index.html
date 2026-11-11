@@ -285,7 +285,7 @@ async function updateHandballResults(){
  const to=new Date(now);to.setUTCDate(to.getUTCDate()+30);
  const ymd=d=>d.toISOString().slice(0,10),base=HANDBALL_API;
  const params=new URLSearchParams({country:'DK',sport_id:'6',from:ymd(from),to:ymd(to),limit:'100'});
- let cursor=null,guard=0,added=0,updated=0,already=0,matched=0,unmapped=0;
+ let cursor=null,guard=0,added=0,updated=0,already=0,conflicts=0,matched=0,unmapped=0;
  do{
   if(cursor)params.set('cursor',cursor);
   const response=await fetch(base+'/events?'+params.toString(),{cache:'no-store'});
@@ -312,13 +312,13 @@ async function updateHandballResults(){
    const status=String(handballField(ev,['status','state','match_status'])||ev.status?.description||ev.status?.type||'').toLowerCase();
    const validScore=hs!==''&&as!==''&&Number.isFinite(Number(hs))&&Number.isFinite(Number(as));
    const finished=/(finished|final|played|ended|complete|ft|closed)/.test(status)||validScore;
-   if(finished&&validScore){if(String(m.hg)!==String(hs)||String(m.ag)!==String(as)){m.hg=String(hs);m.ag=String(as);updated++;}else already++;}
+   if(finished&&validScore){const hasHome=m.hg!==''&&m.hg!=null,hasAway=m.ag!==''&&m.ag!=null;if(hasHome&&hasAway){if(String(m.hg)===String(hs)&&String(m.ag)===String(as))already++;else conflicts++;}else if(!hasHome&&!hasAway){m.hg=String(hs);m.ag=String(as);m.result_source='sportsevents24';m.result_verified_at=new Date().toISOString();updated++;}else conflicts++;}
    m.date=date;m.source='sportsevents24';matched++;
   }
   cursor=payload.nextCursor||payload.next_cursor||null;guard++;
  }while(cursor&&guard<5);
  if(!matched)throw new Error('Der blev hentet data, men ingen kampe kunne matches til de fire danske ligaer. Kontrollér turneringsnavnene i datakilden.');
- return {added,updated,already,matched,unmapped};
+ return {added,updated,already,conflicts,matched,unmapped};
 }
 async function loadHandballAutomatically(){
  if(window.fcHandballLoaded)return;
@@ -328,7 +328,7 @@ async function loadHandballAutomatically(){
  try{
   const result=await updateHandballResults();
   save();render();
-  if(status)status.textContent=`Håndbold opdateret automatisk: ${result.added} nye kampe og ${result.updated} nye/ændrede resultater (${result.matched} kampe fundet).`;
+  if(status)status.textContent=`Håndbold opdateret automatisk: ${result.added} nye kampe og ${result.updated} nye/ændrede resultater (${result.matched} kampe fundet, ${result.conflicts} resultater bevaret til kontrol).`;
  }catch(err){
   if(status)status.textContent='Håndbold kunne ikke hentes automatisk: '+String(err.message||err)+'. Brug Opdatér kampe og resultater for at prøve igen.';
  }
