@@ -10,6 +10,19 @@ SPEC.loader.exec_module(MODULE)
 
 
 class ResultReconciliationTests(unittest.TestCase):
+    def test_api_season_uses_season_start_year_at_july_boundary(self):
+        from datetime import date
+        self.assertEqual(MODULE.season_for_date(date(2026, 6, 30)), 2025)
+        self.assertEqual(MODULE.season_for_date(date(2026, 7, 1)), 2026)
+        self.assertEqual(MODULE.season_for_date(date(2026, 11, 11)), 2026)
+
+    def test_result_window_is_inclusive_and_validates_days(self):
+        from datetime import date
+        self.assertEqual(MODULE.result_window(date(2026, 11, 11)), ("2026-11-04", "2026-11-11"))
+        self.assertEqual(MODULE.result_window(date(2026, 11, 11), days_back=0), ("2026-11-11", "2026-11-11"))
+        with self.assertRaises(ValueError):
+            MODULE.result_window(date(2026, 11, 11), days_back=-1)
+
     def test_exact_result_fills_empty_score_and_records_provenance(self):
         game = {"hg": "", "ag": ""}
         outcome = MODULE.apply_verified_result(
