@@ -34,7 +34,10 @@ def fetch(league_id, season, start, end):
         payload = json.loads(response.read().decode("utf-8"))
     if payload.get("errors"):
         raise RuntimeError(f"API-fejl for liga {league_id}: {payload['errors']}")
-    return payload.get("response", [])
+    fixtures = payload.get("response")
+    if not isinstance(fixtures, list):
+        raise RuntimeError(f"Ugyldigt API-svar for liga {league_id}: response mangler.")
+    return fixtures
 
 
 def norm(value):
@@ -44,6 +47,18 @@ def norm(value):
 def result_key(day, home, away):
     """Stable exact-match key; deliberately does not fuzzy-match team names."""
     return (str(day or "")[:10], norm(home), norm(away))
+
+
+def season_for_date(day):
+    """Return the start year used by API-Football for July–June seasons."""
+    return day.year if day.month >= 7 else day.year - 1
+
+
+def result_window(day, days_back=7):
+    """Return an inclusive ISO-date window ending on the supplied date."""
+    if not isinstance(days_back, int) or days_back < 0:
+        raise ValueError("days_back skal være et heltal på 0 eller derover.")
+    return (day - timedelta(days=days_back)).isoformat(), day.isoformat()
 
 
 def apply_verified_result(game, score, source="api-football", verified_at=None):
@@ -77,9 +92,8 @@ def main():
     data = json.loads(match.group(1))
     matches = data.get("matches", [])
     today = date.today()
-    start = (today - timedelta(days=7)).isoformat()
-    end = today.isoformat()
-    season = today.year if today.month >= 7 else today.year - 1
+    start, end = result_window(today)
+    season = season_for_date(today)
 
     checked = filled = already = conflicts = 0
     for league, league_id in LEAGUES.items():
