@@ -213,7 +213,7 @@ async function syncNow(){
 const $=id=>document.getElementById(id),league=()=>$('league').value||leagues[0],season=()=>$('season').value||'2026/27';
 function isHandballLeague(name=league()){return handballLeagues.includes(name)}
 function isHandball(){return $('sport')?.value==='handball'||isHandballLeague()}
-function updateSportControls(){const sport=$('sport'),sel=$('league');if(!sport||!sel)return;const list=sport.value==='handball'?handballLeagues:footballLeagues;const previous=sel.value;sel.innerHTML=list.map(x=>'<option value="'+esc(x)+'">'+esc(x)+'</option>').join('');sel.value=list.includes(previous)?previous:list[0];document.querySelectorAll('#tabs [data-tab="vaerdi"],#tabs [data-tab="top10"]').forEach(b=>b.hidden=sport.value==='handball');if(sport.value==='handball'&&(tab==='vaerdi'||tab==='top10')){tab='oversigt';document.querySelectorAll('#tabs button').forEach(b=>b.classList.toggle('active',b.dataset.tab===tab));}}
+function updateSportControls(){const sport=$('sport'),sel=$('league');if(!sport||!sel)return;const list=sport.value==='handball'?handballLeagues:footballLeagues;const previous=sel.value;sel.innerHTML=list.map(x=>'<option value="'+esc(x)+'">'+esc(x)+'</option>').join('');sel.value=list.includes(previous)?previous:list[0];document.querySelectorAll('#tabs [data-tab="vaerdi"],#tabs [data-tab="top10"]').forEach(b=>b.hidden=false);}
 function matches(){return data.matches.filter(m=>m.league===league()&&m.season===season())}
 function teams(){return [...new Set([...matches().flatMap(m=>[m.home,m.away]),...(data.teams[league()+'|'+season()]||[])].filter(Boolean))].sort((a,b)=>a.localeCompare(b,'da'))}
 function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
@@ -225,7 +225,7 @@ if(league()==='Championship'&&season()==='2026/27'&&out.Southampton){out.Southam
 return Object.values(out).sort((a,b)=>b.pts-a.pts||(b.gf-b.ga)-(a.gf-a.ga)||b.gf-a.gf||a.team.localeCompare(b.team,'da'))}
 function pct(n,d){return d?Math.round(n/d*100)+'%':'—'}
 function table(rows){if(!rows.length)return '<div class="empty">Ingen hold eller resultater endnu. Tilføj hold og kampe under “Kampe & resultater”.</div>';return '<div class="scroll"><table><thead><tr><th>#</th><th>Hold</th><th>K</th><th>V</th><th>U</th><th>T</th><th>MF</th><th>MI</th><th>±</th><th>P</th></tr></thead><tbody>'+rows.map((r,i)=>'<tr><td>'+(i+1)+'</td><td>'+esc(r.team)+(r.deduction?' (−'+r.deduction+')':'')+'</td><td>'+r.p+'</td><td>'+r.w+'</td><td>'+r.d+'</td><td>'+r.l+'</td><td>'+r.gf+'</td><td>'+r.ga+'</td><td>'+(r.gf-r.ga)+'</td><td><b>'+r.pts+'</b></td></tr>').join('')+'</tbody></table></div>'}
-function render(){if(isHandball()&&(tab==='vaerdi'||tab==='top10'))tab='oversigt';$('app').innerHTML=({oversigt:overview,kampe:games,hold:holddata,vaerdi:values,top10:top10,performance:performanceCenter,backup:backups}[tab])();if(tab==='backup'){syncStatus(fcStatusMessage);updateSyncControls()}}
+function render(){$('app').innerHTML=({oversigt:overview,kampe:games,hold:holddata,vaerdi:isHandball()?handballValues:values,top10:isHandball()?handballValues:top10,performance:performanceCenter,backup:backups}[tab])();if(tab==='backup'){syncStatus(fcStatusMessage);updateSyncControls()}if(isHandball()){const h=$('hbHome'),a=$('hbAway');if(h)h.value=window.fcHbHome||teams()[0]||'';if(a)a.value=window.fcHbAway||teams().find(t=>t!==(window.fcHbHome||teams()[0]))||''}}
 function performanceCenter(){
  const ms=matches().filter(m=>m.hg!==''&&m.ag!==''&&m.hg!=null&&m.ag!=null).slice().sort((a,b)=>(a.date||'').localeCompare(b.date||''));
  const n=ms.length,goals=ms.reduce((v,m)=>v+(+m.hg)+(+m.ag),0),avg=n?goals/n:0;
@@ -239,6 +239,33 @@ function performanceCenter(){
  '<section class="panel"><h2>Mål pr. spillerunde</h2>'+(series.length?'<svg viewBox="0 0 650 190" role="img" aria-label="Søjlediagram over gennemsnitlige mål pr. kamp i de seneste spillerunder" style="width:100%;height:auto;display:block"><line x1="8" y1="150" x2="640" y2="150" stroke="#304968"/>'+bars+'</svg>':'<div class="empty">Der er endnu ikke nok resultater til et diagram.</div>')+'<p class="small">Viser de seneste 12 spillerunder med registrerede resultater.</p></section>'+
  '<section class="panel"><h2>Udvikling pr. spillerunde</h2>'+(rows?'<div class="scroll"><table><thead><tr><th>Runde</th><th>Kampe</th><th>Mål pr. kamp</th><th>Over 2,5</th></tr></thead><tbody>'+rows+'</tbody></table></div>':'<div class="empty">Ingen afsluttede kampe endnu.</div>')+'</section>'+
  tipLedger();
+}
+function handballTeamMetrics(team){
+ const done=matches().filter(m=>m.hg!==''&&m.ag!==''&&m.hg!=null&&m.ag!=null&&(m.home===team||m.away===team));
+ const h=done.filter(m=>m.home===team),a=done.filter(m=>m.away===team),avg=(arr,fn)=>arr.length?arr.reduce((v,m)=>v+fn(m),0)/arr.length:null;
+ return {homeN:h.length,awayN:a.length,homeGF:avg(h,m=>+m.hg),homeGA:avg(h,m=>+m.ag),awayGF:avg(a,m=>+m.ag),awayGA:avg(a,m=>+m.hg),played:done.length};
+}
+function poissonMass(lambda,k){if(!(lambda>0))return k===0?1:0;let p=Math.exp(-lambda);for(let i=1;i<=k;i++)p*=lambda/i;return p}
+function handballDistribution(lambda,max=65){const a=[];for(let k=0;k<=max;k++)a.push(poissonMass(lambda,k));const sum=a.reduce((x,y)=>x+y,0);return a.map(x=>x/sum)}
+function handballModel(home,away){
+ const h=handballTeamMetrics(home),a=handballTeamMetrics(away),done=matches().filter(m=>m.hg!==''&&m.ag!==''&&m.hg!=null&&m.ag!=null);
+ const leagueAvg=done.length?done.reduce((v,m)=>v+(+m.hg)+(+m.ag),0)/done.length:54;
+ const avgHome=done.length?done.reduce((v,m)=>v+(+m.hg),0)/done.length:leagueAvg/2;
+ const avgAway=done.length?done.reduce((v,m)=>v+(+m.ag),0)/done.length:leagueAvg/2;
+ const eh=[h.homeGF,a.awayGA].every(Number.isFinite)?(h.homeGF+a.awayGA)/2:[h.homeGF,a.awayGA].find(Number.isFinite)??avgHome;
+ const ea=[a.awayGF,h.homeGA].every(Number.isFinite)?(a.awayGF+h.homeGA)/2:[a.awayGF,h.homeGA].find(Number.isFinite)??avgAway;
+ const ph=handballDistribution(eh),pa=handballDistribution(ea);
+ let homeWin=0,draw=0,awayWin=0,totalOver50=0,totalOver54=0,totalOver56=0,homeMinus2=0;
+ for(let x=0;x<ph.length;x++)for(let y=0;y<pa.length;y++){const p=ph[x]*pa[y];if(x>y)homeWin+=p;else if(x===y)draw+=p;else awayWin+=p;if(x+y>50.5)totalOver50+=p;if(x+y>54.5)totalOver54+=p;if(x+y>56.5)totalOver56+=p;if(x-y>2)homeMinus2+=p;}
+ return {eh,ea,homeWin,draw,awayWin,totalOver50,totalOver54,totalOver56,homeMinus2,sample:Math.min(h.played,a.played),homePlayed:h.played,awayPlayed:a.played};
+}
+function handballValues(){
+ const ts=teams(),home=window.fcHbHome||ts[0]||'',away=window.fcHbAway||ts.find(t=>t!==home)||'',odds=window.fcHbOdds||{};
+ const model=handballModel(home,away),markets=[['home','Hjemmesejr',model.homeWin],['draw','Uafgjort',model.draw],['away','Udebanesejr',model.awayWin],['o50','Over 50,5 mål',model.totalOver50],['o54','Over 54,5 mål',model.totalOver54],['o56','Over 56,5 mål',model.totalOver56],['hm2','Hjemmehold -2,5 mål',model.homeMinus2]];
+ const num=v=>Number.isFinite(v)?v.toFixed(2):'—',fmt=v=>Number.isFinite(v)?(v*100).toFixed(1)+'%':'—';
+ const opts=ts.map(t=>'<option value="'+esc(t)+'">'+esc(t)+'</option>').join('');
+ const rows=markets.map(([key,label,p])=>{const raw=odds[key]||'',o=Number(String(raw).replace(',','.')),valid=raw!==''&&o>1&&Number.isFinite(o),ev=valid?p*o-1:null;return '<div class="panel" style="margin:0;padding:12px"><b>'+label+'</b><div class="field"><label>Bookmakerodds</label><input type="number" min="1.01" step="0.01" data-hb-odds="'+key+'" placeholder="Fx 1,90" value="'+esc(raw)+'"></div><div class="grid"><div><span class="small">Modelchance</span><br><b>'+fmt(p)+'</b></div><div><span class="small">Fair odds</span><br><b>'+num(p>0?1/p:Infinity)+'</b></div><div><span class="small">EV</span><br><b>'+(ev==null?'—':(ev>=0?'+':'')+fmt(ev))+'</b></div></div></div>';}).join('');
+ return '<section class="panel"><h2>Håndbold Value Finder · '+esc(league())+'</h2><p class="small">Separat håndboldmodel baseret på holdenes mål for/imod hjemme og ude. Kampvinder, uafgjort, totalmål og handicap beregnes med to Poisson-fordelinger. Markedslinjerne er modelvalg – indtast selv de faktiske odds.</p><div class="grid"><div class="field"><label>Hjemmehold</label><select id="hbHome">'+opts+'</select></div><div class="field"><label>Udehold</label><select id="hbAway">'+opts+'</select></div></div><div class="grid"><div class="stat"><strong>'+num(model.eh)+'</strong><span>Forventede hjemmemål</span><small>'+model.homePlayed+' kampe i historikken</small></div><div class="stat"><strong>'+num(model.ea)+'</strong><span>Forventede udemål</span><small>'+model.awayPlayed+' kampe i historikken</small></div><div class="stat"><strong>'+model.sample+'</strong><span>Mindste holdstikprøve</span></div></div></section><section class="panel"><h2>Odds, fair odds og forventet værdi</h2><div class="grid">'+rows+'</div><p class="small">EV = modelchance × decimalodds − 1. Ved manglende historik falder modellen tilbage på ligaens gennemsnit, og stikprøven vises åbent. Ingen automatisk håndboldodds-feed er tilsluttet endnu.</p></section>';
 }
 function currentMatchModel(home,away,type){
  const hm=teamMetrics(home),am=teamMetrics(away),done=matches().filter(m=>m.hg!==''&&m.ag!==''&&m.hg!=null&&m.ag!=null);
@@ -548,6 +575,7 @@ if(e.target.id==='syncSignup'){authAction('signup');return}
 if(e.target.id==='syncNow'){syncNow();return}
  if(e.target.id==='fetchAutomaticOdds'){fetchAutomaticOdds();return}
 if(e.target.id==='registerTip'){registerCurrentTip();return}
+if(e.target.dataset.hbOdds){window.fcHbOdds=window.fcHbOdds||{};window.fcHbOdds[e.target.dataset.hbOdds]=e.target.value;return}
 if(e.target.dataset.tipId&&e.target.dataset.settle){settleTip(e.target.dataset.tipId,e.target.dataset.settle);return}
 if(e.target.id==='syncLogout'){if(fcSupabase)fcSupabase.auth.signOut();return}
 if(e.target.dataset.valuetype){window.fcValueType=e.target.dataset.valuetype;render();return}
@@ -558,6 +586,8 @@ if(e.target.id==='export'){let blob=new Blob([JSON.stringify({format:'fodboldcen
 if(e.target.id==='import'){let f=$('importfile').files[0];if(!f){alert('Vælg en backupfil først.');return}let r=new FileReader();r.onload=()=>{try{let obj=JSON.parse(r.result),d=obj.data||obj;if(!Array.isArray(d.matches)||typeof d.teams!=='object')throw Error();if(!confirm('Import erstatter dine nuværende data i denne browser. Fortsæt?'))return;data=d;save();render();alert('Backup importeret.')}catch(err){alert('Filen kunne ikke læses som en Fodboldcenter-backup.')}};r.readAsText(f)}
 });
 $('app').addEventListener('change',e=>{let el=e.target;
+if(el.id==='hbHome'){window.fcHbHome=el.value;if(window.fcHbAway===window.fcHbHome)window.fcHbAway=teams().find(t=>t!==window.fcHbHome)||'';render();return}
+if(el.id==='hbAway'){window.fcHbAway=el.value;render();return}
 if(el.id==='calcHome'){window.fcHome=el.value;if(window.fcAway===window.fcHome)window.fcAway=teams().find(t=>t!==window.fcHome)||'';render();return}
 if(el.id==='calcAway'){window.fcAway=el.value;render();return}
 if(el.id==='calcOdds'){window.fcOdds=el.value;render();return}
