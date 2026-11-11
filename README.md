@@ -28,6 +28,9 @@ The SQL creates the public.fodboldcenter_data table and enables row-level securi
 
 - The browser app currently uses the existing result sources and the existing football-odds Supabase Edge Function.
 - Provider coverage, league identifiers, historical depth, bookmaker availability, rate limits and commercial redistribution rights must be verified before the service is marketed as fully automatic or used in a paid product.
+- The current handball client query is limited to Denmark. SportsEvents24 documents a country + sport filter and a free-open-beta quota of 100 requests/day per IP, 5,000 records/month per IP and 10 requests/minute. This is useful for prototyping, but not yet a production reliability or commercial-licensing basis: https://sportsevents24.com/api.
+- SportsEvents24's public handball listings show German men's top-flight competition names such as “1. Bundesliga Männer”. The exact tournament ID and event-query behavior must be verified before wiring this into the app; do not broaden the current German request to all handball events because that could consume the provider quota and mix youth/regional competitions into the model.
+- Football Soccer API documents a coverage endpoint for league-season match counts and data availability. The repository includes a coverage-check script, but a successful live coverage check still requires the private FSAPI_KEY secret: https://footballsoccerapi.com/documentation/coverage.
 - Do not fabricate missing fixtures, odds or results. Missing provider data should remain visibly unavailable or be entered manually.
 - Do not describe a model estimate as a bookmaker quote.
 
