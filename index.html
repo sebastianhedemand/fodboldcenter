@@ -229,7 +229,7 @@ function render(){$('app').innerHTML=({oversigt:overview,kampe:games,hold:holdda
 function performanceCenter(){
  const ms=matches().filter(m=>m.hg!==''&&m.ag!==''&&m.hg!=null&&m.ag!=null).slice().sort((a,b)=>(a.date||'').localeCompare(b.date||''));
  const n=ms.length,goals=ms.reduce((v,m)=>v+(+m.hg)+(+m.ag),0),avg=n?goals/n:0;
- const o15=ms.filter(m=>+m.hg + +m.ag>=2).length,o25=ms.filter(m=>+m.hg + +m.ag>=3).length;
+ const hb=isHandball(),lineA=hb?50.5:1.5,lineB=hb?54.5:2.5;const o15=ms.filter(m=>+m.hg + +m.ag>lineA).length,o25=ms.filter(m=>+m.hg + +m.ag>lineB).length;
  const rounds=[...new Set(ms.map(m=>m.round||m.date||'Uden runde'))].sort((a,b)=>String(a).localeCompare(String(b),undefined,{numeric:true})).slice(-12);
  const series=rounds.map(r=>{const a=ms.filter(m=>String(m.round||m.date||'Uden runde')===String(r));return {round:r,count:a.length,goals:a.reduce((v,m)=>v+(+m.hg)+(+m.ag),0)/a.length,over25:a.filter(m=>+m.hg + +m.ag>=3).length/a.length};});
  const max=Math.max(1,...series.map(x=>x.goals));
